@@ -1,101 +1,197 @@
-import Image from "next/image";
+"use client";
+import Image from 'next/image';
+import { useState } from "react";
+
+type Message = {
+  role: "user" | "ai";
+  content: string;
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [questionType, setQuestionType] = useState<string>("general");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const [message, setMessage] = useState("");
+  // Create arrays for each agent's messages and loading states
+  const [agentMessages, setAgentMessages] = useState<Message[][]>([
+    [{ role: "ai", content: "Hello! I'm Llama. How can I help?" }],
+    [{ role: "ai", content: "Hello! I'm Gemma. How can I help?" }],
+    [{ role: "ai", content: "Hello! I'm Mistral. How can I help?" }],
+  ]);
+  const [isLoading, setIsLoading] = useState([false, false, false]);
+
+  const handleSend = async () => {
+    if (!message.trim()) return;
+  
+    // Add user message to all agents
+    setAgentMessages(prev => prev.map(messages => [
+      { role: "user", content: message },
+      ...messages
+    ]));
+    setMessage("");
+    setIsLoading([true, true, true]);
+  
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, questionType }),
+      });
+  
+      const data = await response.json();
+      
+      // Map each response to the correct agent
+      setAgentMessages(prev => prev.map((messages, idx) => [
+        { 
+          role: "ai", 
+          content: idx === 0 ? data.llamaResponse : 
+          idx === 1 ? data.gemmaResponse : 
+          data.mistralResponse 
+        },
+        ...messages
+      ]));
+  
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsLoading([false, false, false]);
+    }
+  };
+
+  const agentNames = ["Llama", "Gemma", "Mistral"];
+
+return (
+  <div className="flex flex-col h-screen bg-white"> {/* Changed to white */}
+    {/* App Title*/}
+    <div className="w-full bg-white border-b border-gray-200 p-4"> 
+      <h1 className="text-2xl font-bold text-center text-gray-800">
+        TriEval: Evaluate the responses of chatbots using different LLMs
+      </h1>
+    </div>
+
+      {/* Input Area */}
+      <div className="w-full bg-gray-100 border-b border-gray-200 p-4 sticky top-0 z-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex gap-3 items-center">
+        <select
+            value={questionType}
+            onChange={(e) => setQuestionType(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <option value="general">General</option>
+            <option value="medical">Medical</option>
+            <option value="academic">Academic</option>
+          </select>
+          <input
+            type="text"
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            onKeyPress={e => e.key === "Enter" && handleSend()}
+            placeholder="Type your message..."
+            className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+          />
+          <button
+            onClick={handleSend}
+            disabled={isLoading.some(Boolean)}
+            className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
           >
-            Read our docs
-          </a>
+            {isLoading.some(Boolean) ? "Sending..." : "Send"}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+    </div>
+
+    {/* Chat Area */}
+    <div className="flex-1 flex">
+      {[0, 1, 2].map((agentIndex) => (
+        <div key={agentIndex} className="flex flex-col w-1/3 border-r border-gray-200">
+          <div className="bg-gray-100 border-b border-gray-200 p-4">
+            <h1 className="text-xl font-semibold text-gray-800">{agentNames[agentIndex]}</h1>
+          </div>
+          <ChatSection 
+            messages={agentMessages[agentIndex]}
+            isLoading={isLoading[agentIndex]}
+            agentIndex={agentIndex}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Modified ChatSection component
+function ChatSection({ messages, isLoading, agentIndex }: {
+  messages: Message[];
+  isLoading: boolean;
+  agentIndex: number;
+}) {
+  const getAgentColor = (isAi: boolean) => {
+    if (!isAi) return 'bg-blue-500 text-white'; // User messages are blue
+    switch(agentIndex) {
+      case 0: return 'bg-yellow-100 text-gray-800'; // Agent 1 yellow
+      case 1: return 'bg-green-100 text-gray-800';  // Agent 2 green
+      case 2: return 'bg-red-100 text-gray-800';    // Agent 3 red
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+  const getAgentIcon = (agentIndex: number) => {
+    switch(agentIndex) {
+      case 0: return '/llama.png';
+      case 1: return '/gemma.png';
+      case 2: return '/mistral.png';
+      default: return '';
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-4 pt-4 bg-white">
+      <div className="px-4">
+        {isLoading && (
+          <div className="flex gap-4 mb-4">
+            <div className="w-8 h-8 flex-shrink-0">
+              <Image
+                src={getAgentIcon(agentIndex)}
+                alt={agentNames[agentIndex]}
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+            </div>
+            <div className={`px-4 py-2 rounded-2xl ${getAgentColor(true)}`}>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+              </div>
+            </div>
+          </div>
+        )}
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`flex gap-4 mb-4 ${
+              msg.role === "ai" ? "justify-start" : "justify-end"
+            }`}
+          >
+            {msg.role === "ai" && (
+              <div className="w-8 h-8 flex-shrink-0">
+                <Image
+                  src={getAgentIcon(agentIndex)}
+                  alt={agentNames[agentIndex]}
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              </div>
+            )}
+            <div
+              className={`px-4 py-2 rounded-2xl max-w-[80%] ${getAgentColor(msg.role === "ai")}`}
+            >
+              {msg.content}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
+}
 }
