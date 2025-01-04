@@ -2,11 +2,17 @@
 import Image from 'next/image';
 import { useState } from "react";
 // import { insertExperiment } from "@/app/util/dbClient";
+// import { feedPrompts, feedSpeed, feedScore } from "@/db/feedData";
 
 type Message = {
   role: "user" | "ai";
   content: string;
 };
+
+
+// export const promptDB: string[] = [];
+// export const testQuestionDB: string[] = [];
+// export const expectedAnswerDB: string[] = [];
 
 export default function Home() {
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -39,7 +45,9 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ systemPrompt, testQuestion, expectedAnswer }),
       });
-  
+
+      // feedPrompts(systemPrompt, testQuestion, expectedAnswer);
+
       const data = await response.json();
       
       // Map each response to the correct agent

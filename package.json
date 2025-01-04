@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate --dialect=postgresql --schema=src/db/schema.ts --out=./drizzle",
-    "db:migrate": "tsx ./src/db/migrate.ts"
+    "db:migrate": "tsx ./src/db/migrate.ts",
+    "db:seed": "tsx ./src/db/seed.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

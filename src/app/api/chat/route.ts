@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { getGroqResponse, llmJudge } from "@/app/util/llmClient";
 // import { scrapeUrl, urlPattern } from "@/app/util/scraper";
+import { feedScore, feedSpeed, feedExperiment } from "@/db/index";
+
+export const judgeResponse = [];
+export const executionTimes = [];
 
 export async function POST(req: Request) {
-    const { testQuestion, systemPrompt } = await req.json();
+    const { systemPrompt, testQuestion, expectedAnswer } = await req.json();
     try {
         const [llamaResponse, gemmaResponse, mistralResponse] = await Promise.all([
             getGroqResponse("llama-3.3-70b-versatile", systemPrompt, testQuestion),
@@ -15,17 +19,21 @@ export async function POST(req: Request) {
             gemmaResponse.content, 
             mistralResponse.content]);
         
-        console.log(JSON.stringify({
-            llamaResponse: llamaResponse.content, 
-            gemmaResponse: gemmaResponse.content, 
-            mistralResponse: mistralResponse.content, 
-            judgeResponse,
-            executionTimes: {
-                llama: llamaResponse.executionTime,
-                gemma: gemmaResponse.executionTime,
-                mistral: mistralResponse.executionTime
-            }
-         }));
+        feedScore(judgeResponse.f1Scores[0], judgeResponse.f1Scores[1], judgeResponse.f1Scores[2]);
+        feedSpeed(llamaResponse.executionTime, gemmaResponse.executionTime, mistralResponse.executionTime);
+        feedExperiment(systemPrompt, testQuestion, expectedAnswer);
+
+        // console.log(JSON.stringify({
+        //     llamaResponse: llamaResponse.content, 
+        //     gemmaResponse: gemmaResponse.content, 
+        //     mistralResponse: mistralResponse.content, 
+        //     judgeResponse,
+        //     executionTimes: {
+        //         llama: llamaResponse.executionTime,
+        //         gemma: gemmaResponse.executionTime,
+        //         mistral: mistralResponse.executionTime
+        //     }
+        //  }));
 
         return NextResponse.json({
             llamaResponse: llamaResponse.content, 
