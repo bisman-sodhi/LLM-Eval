@@ -1,5 +1,5 @@
 {
-  "id": "d74dd157-8793-40a5-8ed8-7f46defa4fc4",
+  "id": "598c4aa4-395e-4906-8065-12f71f7ff6f6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -68,6 +68,13 @@
           "type": "real",
           "primaryKey": false,
           "notNull": true
+        },
+        "conclusion": {
+          "name": "conclusion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'No conclusion provided'"
         }
       },
       "indexes": {},

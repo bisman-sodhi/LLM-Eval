@@ -30,6 +30,7 @@ async function seed() {
       llamaScore: 0,
       gemmaScore: 0,
       mistralScore: 0,
+      conclusion: "No conclusion provided",
     },
   ]);
 

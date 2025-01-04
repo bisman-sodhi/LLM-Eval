@@ -9,7 +9,8 @@ CREATE TABLE "score_table" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"llama_score" real NOT NULL,
 	"gemma_score" real NOT NULL,
-	"mistral_score" real NOT NULL
+	"mistral_score" real NOT NULL,
+	"conclusion" text DEFAULT 'No conclusion provided' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "speed_table" (

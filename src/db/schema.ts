@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp, real } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, real } from 'drizzle-orm/pg-core';
 
 export const experimentsTable = pgTable('experiments_table', {
   id: serial('id').primaryKey(),
@@ -12,6 +12,7 @@ export const scoreData = pgTable('score_table', {
     llamaScore: real('llama_score').notNull(),
     gemmaScore: real('gemma_score').notNull(),
     mistralScore: real('mistral_score').notNull(),
+    conclusion: text('conclusion').notNull().default('No conclusion provided')
 });
 
 export const speedData = pgTable('speed_table', {

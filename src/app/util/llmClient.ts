@@ -47,6 +47,7 @@ export async function getGroqResponse(model: string, systemPrompt: string, testQ
   }
 
 interface Scores {
+    closeness: number;
     helpfulness: number;
     relevance: number;
     accuracy: number;
@@ -55,23 +56,60 @@ interface Scores {
     conciseness: number;
 }
 
-export async function llmJudge(testQuestion: string, expectedAnswer: string[]): Promise<{ f1Scores: number[] }> {
+function calculateF1Score(scores: Scores): number {
+  // Validate that all required scores are present
+  const requiredScores = ['closeness', 'helpfulness', 'relevance', 'accuracy', 'depth', 'creativity', 'conciseness'];
+  
+  const missingScores = requiredScores.filter(score => !(score in scores));
+  if (missingScores.length > 0) {
+      console.error('Missing scores:', missingScores);
+      return 0;
+  }
+
+  const { closeness, helpfulness, relevance, accuracy, depth, creativity, conciseness } = scores;
+  
+  // Log all scores before calculation
+  console.log('Processing complete score set:', {
+      closeness, helpfulness, relevance, accuracy, depth, creativity, conciseness
+  });
+
+  // Precision calculation
+  const precision = (relevance + accuracy + closeness) / 3;
+  console.log('Precision:', precision);
+
+  // Recall calculation
+  const recall = (helpfulness + depth + creativity + conciseness) / 4;
+  console.log('Recall:', recall);
+
+  // F1 Score calculation
+  if (precision + recall === 0) return 0;
+  const f1Score = (2 * precision * recall) / (precision + recall);
+  
+  return Number(f1Score.toFixed(2));
+}
+
+export async function llmJudge(testQuestion: string, expectedAnswer: string, chatbotResponses: string[]): Promise<{conclusion: string, f1Scores: number[] }> {
     const judge_prompt = `
-                        You are an impartial judge evaluating AI responses. Compare these responses to the question: "${testQuestion}"
+                        You are an impartial judge evaluating AI responses. Compare these three responses to the question: 
+                        Question: "${testQuestion}"
+                        ${expectedAnswer ? `Expected Answer: "${expectedAnswer}"` : "Note: No specific expected answer is provided for this question."}
 
-                        Avoid any position biases and ensure that the order in which the responses were presented does not influence your decision. 
-                        Do not favor certain names of the assistants. 
+                        Avoid any position biases and ensure that the order in which the responses are presented does not influence your decision. 
+                        Do not favor certain names of the assistants.
+                        
+                        Please evaluate these responses based on the following criteria (rate 1-10):
+                        - Closeness: How well it matches the expected answer (if no expected answer is provided, evaluate based on general accuracy and appropriateness).
+                        - Helpfulness: How effectively it addresses the user's needs
+                        - Relevance: How directly it answers the question
+                        - Accuracy: Factual correctness and precision
+                        - Depth: Thoroughness and level of detail
+                        - Creativity: Innovative thinking and unique insights
+                        - Conciseness: Efficiency and clarity of communication
 
-                        For each response, rate on a scale of 1-10 for these criteria (provide only numbers, no explanations):
-                        - Helpfulness: How well it addresses the user's needs
-                        - Relevance: How closely it relates to the question
-                        - Accuracy: How factually correct it is
-                        - Depth: How thorough the explanation is
-                        - Creativity: How innovative or insightful the response is
-                        - Conciseness: How efficiently it communicates
-
-                        First provide the numerical scores in this exact format for each response:
+                        Provide:
+                        1. The numerical scores in this exact format for each response:
                         Response 1 scores:
+                        Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
                         Accuracy: [number]
@@ -80,6 +118,7 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string[]): 
                         Conciseness: [number]
 
                         Response 2 scores:
+                        Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
                         Accuracy: [number]
@@ -88,6 +127,7 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string[]): 
                         Conciseness: [number]
 
                         Response 3 scores:
+                        Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
                         Accuracy: [number]
@@ -96,11 +136,18 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string[]): 
                         Conciseness: [number]
 
                         Responses to evaluate:
-                        1: ${expectedAnswer[0]}
-                        2: ${expectedAnswer[1]}
-                        3: ${expectedAnswer[2]}
+                        1: ${chatbotResponses[0]}
+                        2: ${chatbotResponses[1]}
+                        3: ${chatbotResponses[2]}
 
-                        Provide a structured analysis and conclude which response is best.`;
+                        2. A brief but detailed conclusion comparing the responses, highlighting:
+                        - Which model performed best overall and why
+                        - Key strengths and weaknesses of each response
+                        - Specific examples from the responses to support your evaluation
+                        
+                        Format the conclusion as: "Conclusion: [your analysis]"
+
+                        `;
 
     try {
         const result = await gemini.generateContent(judge_prompt);
@@ -112,43 +159,61 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string[]): 
         const responseLines = text.split('\n');
         
         let currentScores: Partial<Scores> = {};
+        let currentResponseScores: Partial<Scores> | null = null;
+
         for (const line of responseLines) {
-            if (line.includes(':')) {
-                const [criterion, scoreStr] = line.split(':').map((s: string) => s.trim());
-                const score = parseInt(scoreStr);
-                if (!isNaN(score) && score >= 0 && score <= 10) {
-                    currentScores[criterion.toLowerCase() as keyof Scores] = score;
-                    if (Object.keys(currentScores).length === 6) {
-                        scores.push(currentScores as Scores);
-                        currentScores = {};
-                    }
-                }
-            }
+          if (line.toLowerCase().includes('response') && line.includes('scores:')) {
+              if (currentResponseScores && Object.keys(currentResponseScores).length > 0) {
+                  scores.push(currentResponseScores as Scores);
+              }
+              currentResponseScores = {};
+              continue;
+          }
+  
+          if (currentResponseScores && line.includes(':')) {
+              const [criterion, scoreStr] = line.split(':').map((s: string) => s.trim());
+              const cleanedScoreStr = scoreStr.replace(/[^\d.]/g, '');
+              const score = parseFloat(cleanedScoreStr);
+  
+              if (!isNaN(score) && score >= 0 && score <= 10) {
+                  const key = criterion.toLowerCase() as keyof Scores;
+                  currentResponseScores[key] = score;
+              }
+          }
+      }
+  
+      // Don't forget to add the last set of scores
+      if (currentResponseScores && Object.keys(currentResponseScores).length > 0) {
+          scores.push(currentResponseScores as Scores);
+      }
+  
+      console.log('Parsed score sets:', scores);
+  
+      // Calculate F1 scores
+      const f1Scores = scores.map((scoreSet, index) => {
+          console.log(`Calculating F1 score for response ${index + 1}:`, scoreSet);
+          return calculateF1Score(scoreSet);
+      });
+        const conclusionMatch = text.match(/conclusion:([^]*?)(?=\n\n|$)/i);
+        const conclusion = conclusionMatch ? conclusionMatch[1].trim() : "No conclusion provided";
+        // Validate results
+        if (f1Scores.length !== 3) {
+          throw new Error("Failed to calculate scores for all responses");
         }
 
-        // Calculate F1 scores
-        const f1Scores = scores.map(score => calculateF1Score(score));
+        if (!conclusion) {
+          throw new Error("Failed to extract conclusion from response");
+        }
         console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.log(f1Scores);
         console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        return { f1Scores };
+        console.log(conclusion);
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        return { conclusion, f1Scores };
     } catch (error) {
         console.error("Error in LLM Judge:", error);
         throw new Error("Failed to get judge's evaluation");
     }
 }
 
-function calculateF1Score(scores: Scores): number {
-    const { helpfulness, relevance, accuracy, depth, creativity, conciseness } = scores;
-  
-    // Precision-like criteria
-    const precision = (relevance + accuracy) / 2;
-  
-    // Recall-like criteria
-    const recall = (helpfulness + depth + creativity + conciseness) / 4;
-  
-    // F1 Score calculation
-    const f1Score = (2 * precision * recall) / (precision + recall);
-  
-    return Number(f1Score.toFixed(2)) || 0; // Return rounded to 2 decimal places
-}
+

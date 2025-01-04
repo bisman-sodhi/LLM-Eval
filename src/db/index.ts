@@ -9,12 +9,17 @@ config({ path: '.env' });
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
-export async function feedScore(llamaScore: number, gemmaScore: number, mistralScore: number) {
+export async function feedScore(
+    llamaScore: number, 
+    gemmaScore: number, 
+    mistralScore: number, 
+    conclusion: string) {
     try {
         await db.insert(scoreData).values({
             llamaScore,
             gemmaScore,
-            mistralScore
+            mistralScore,
+            conclusion
         });
         console.log('Score data inserted successfully');
     } catch (error) {

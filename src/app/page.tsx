@@ -23,6 +23,7 @@ export default function Home() {
     llamaScore: number;
     gemmaScore: number;
     mistralScore: number;
+    conclusion: string;
   }>>([]);
   
   const [speedData, setSpeedData] = useState<Array<{
@@ -33,9 +34,10 @@ export default function Home() {
   }>>([]);
 
   const handleSend = async () => {
-    if (!systemPrompt.trim() || !testQuestion.trim() || !expectedAnswer.trim()) return;
+    if (!testQuestion.trim()) return;
   
-    // await insertExperiment(systemPrompt, testQuestion, expectedAnswer);
+    const finalSystemPrompt = systemPrompt.trim() || "You are a helpful assistant";
+    const finalExpectedAnswer = expectedAnswer.trim() || "";
     // Add user message to all agents
     setAgentMessages(prev => prev.map(messages => [
       { role: "user", content: testQuestion },
@@ -50,7 +52,11 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ systemPrompt, testQuestion, expectedAnswer }),
+        body: JSON.stringify({ 
+          systemPrompt: finalSystemPrompt, 
+          testQuestion, 
+          expectedAnswer: finalExpectedAnswer 
+        }),
       });
 
       // feedPrompts(systemPrompt, testQuestion, expectedAnswer);
@@ -73,7 +79,8 @@ export default function Home() {
         name: prev.length + 1,
         llamaScore: data.judgeResponse.f1Scores[0],
         gemmaScore: data.judgeResponse.f1Scores[1],
-        mistralScore: data.judgeResponse.f1Scores[2]
+        mistralScore: data.judgeResponse.f1Scores[2],
+        conclusion: data.judgeResponse.conclusion
       }]);
 
       // Update speed data with new entry
@@ -98,33 +105,61 @@ export default function Home() {
   useEffect(() => {
     const loadHistoricalData = async () => {
       try {
-        const response = await fetch('/api/historical-data/');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
+        const response = await fetch('/api/historical-data');
         
-        if (data.scores && data.speeds) {
-          const formattedScoreData = data.scores.map((score: any, index: number) => ({
-            name: index + 1,
-            llamaScore: score.llama_score,
-            gemmaScore: score.gemma_score,
-            mistralScore: score.mistral_score
-          }));
-    
-          const formattedSpeedData = data.speeds.map((speed: any, index: number) => ({
-            name: index + 1,
-            llamaSpeed: speed.llama_speed,
-            gemmaSpeed: speed.gemma_speed,
-            mistralSpeed: speed.mistral_speed
-          }));
-    
-          setScoreData(formattedScoreData);
-          setSpeedData(formattedSpeedData);
+        if (!response.ok) {
+          console.error('Server error:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url
+          });
+  
+          // Try to get error details if available
+          try {
+            const errorData = await response.json();
+            console.error('Error details:', errorData);
+          } catch (parseError) {
+            console.error('Could not parse error response');
+          }
+  
+          setScoreData([]);
+          setSpeedData([]);
+          return;
         }
+  
+        const data = await response.json();
+        console.log('Received data:', data); // Debug log
+  
+        if (!data.scores || !data.speeds) {
+          console.error('Invalid data format:', data);
+          setScoreData([]);
+          setSpeedData([]);
+          return;
+        }
+  
+        const formattedScoreData = data.scores.map((score: any, index: number) => ({
+          name: index + 1,
+          llamaScore: score.llamaScore,
+          gemmaScore: score.gemmaScore,
+          mistralScore: score.mistralScore,
+          conclusion: score.conclusion
+        }));
+  
+        const formattedSpeedData = data.speeds.map((speed: any, index: number) => ({
+          name: index + 1,
+          llamaSpeed: speed.llamaSpeed,
+          gemmaSpeed: speed.gemmaSpeed,
+          mistralSpeed: speed.mistralSpeed
+        }));
+  
+        setScoreData(formattedScoreData);
+        setSpeedData(formattedSpeedData);
+        
       } catch (error) {
-        console.error('Error loading historical data:', error);
-        // Set empty arrays if there's an error
+        console.error('Error loading historical data:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          error
+        });
         setScoreData([]);
         setSpeedData([]);
       }
@@ -134,89 +169,93 @@ export default function Home() {
   }, []);
 
 return (
-  <div className="flex flex-col h-screen bg-white">
-    {/* App Title*/}
-    <div className="w-full bg-white border-b border-gray-200 p-4"> 
+  <div className="flex flex-col min-h-screen bg-white">
+    {/* App Title */}
+    <div className="w-full bg-white border-b border-gray-200 p-4">
       <h1 className="text-2xl font-bold text-center text-gray-800">
         TriEval: Evaluate the chatbot responses generated by different LLMs
       </h1>
     </div>
-    
 
-    <div className="flex flex-1">
-        {/* Chat Section - 75% width */}
-        <div className="w-3/4">
-          {/* Input Area */}
-          <div className="w-full bg-gray-100 border-b border-gray-200 p-4 sticky top-0 z-10">
-            {/* System Prompt */}
-            <div className="max-w-6xl mx-auto mb-4">
-                <div className="flex gap-3 items-center">
-                    <input
-                        type="text"
-                        value={systemPrompt}
-                        onChange={e => setSystemPrompt(e.target.value)}
-                        onKeyPress={e => e.key === "Enter" && handleSend()}
-                        placeholder="Type your prompt here..."
-                        className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                    />
-                </div>
-            </div>
-
-            {/* Test question */}
-            <div className="max-w-6xl mx-auto mb-4">
-                <div className="flex gap-3 items-center">
-                    <input
-                        type="text"
-                        value={testQuestion}
-                        onChange={e => setTestQuestion(e.target.value)}
-                        onKeyPress={e => e.key === "Enter" && handleSend()}
-                        placeholder="Type your question here..."
-                        className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                    />
-                </div>
-            </div>
-
-            {/* Expected answer */}
-            <div className="max-w-6xl mx-auto">
-                <div className="flex gap-3 items-center">
-                    <input
-                        type="text"
-                        value={expectedAnswer}
-                        onChange={e => setExpectedAnswer(e.target.value)}
-                        onKeyPress={e => e.key === "Enter" && handleSend()}
-                        placeholder="Type your expected answer here..."
-                        className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                    />
-                    <button
-                        onClick={handleSend}
-                        disabled={isLoading.some(Boolean)}
-                        className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
-                    >
-                        {isLoading.some(Boolean) ? "Sending..." : "Send"}
-                    </button>
-                </div>
-            </div>
+    <div className="flex flex-1 relative">
+      {/* Chat Section - 75% width */}
+      <div className="w-3/4 overflow-y-auto">
+        {/* Input Area */}
+        <div className="w-full bg-gray-100 border-b border-gray-200 p-4 sticky top-0 z-10">
+          {/* System Prompt */}
+          <div className="max-w-6xl mx-auto mb-4">
+              <div className="flex gap-3 items-center">
+                  <input
+                      type="text"
+                      value={systemPrompt}
+                      onChange={e => setSystemPrompt(e.target.value)}
+                      onKeyPress={e => e.key === "Enter" && handleSend()}
+                      placeholder="Type your system prompt here... [optional]"
+                      className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                  />
+              </div>
           </div>
 
-          {/* Chat Area */}
-          <div className="flex">
-            {[0, 1, 2].map((agentIndex) => (
-              <div key={agentIndex} className="flex flex-col w-1/3 border-r border-gray-200">
-                <div className="bg-gray-100 border-b border-gray-200 p-4">
-                    <h1 className="text-xl font-semibold text-gray-800">{agentNames[agentIndex]}</h1>
-                </div>
-                <ChatSection 
-                    messages={agentMessages[agentIndex]}
-                    isLoading={isLoading[agentIndex]}
-                    agentIndex={agentIndex}
-                />
+          {/* Test question */}
+          <div className="max-w-6xl mx-auto mb-4">
+              <div className="flex gap-3 items-center">
+                  <input
+                      type="text"
+                      value={testQuestion}
+                      onChange={e => setTestQuestion(e.target.value)}
+                      onKeyPress={e => e.key === "Enter" && handleSend()}
+                      placeholder="Type your question here..."
+                      className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                  />
               </div>
-            ))}
+          </div>
+
+          {/* Expected answer */}
+          <div className="max-w-6xl mx-auto">
+              <div className="flex gap-3 items-center">
+                  <input
+                      type="text"
+                      value={expectedAnswer}
+                      onChange={e => setExpectedAnswer(e.target.value)}
+                      onKeyPress={e => e.key === "Enter" && handleSend()}
+                      placeholder="Type your expected answer here... [optional]"
+                      className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                  />
+                  <button
+                      onClick={handleSend}
+                      disabled={isLoading.some(Boolean)}
+                      className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
+                  >
+                      {isLoading.some(Boolean) ? "Sending..." : "Send"}
+                  </button>
+              </div>
           </div>
         </div>
 
-        {/* Graphs Section - 25% width */}
-        <Graphs scoreData={scoreData} speedData={speedData} />
+        {/* Chat Area */}
+        <div className="flex divide-x divide-gray-200 min-h-screen">
+          {[0, 1, 2].map((agentIndex) => (
+            <div key={agentIndex} className="flex-1 flex flex-col min-h-full">
+              <div className="bg-gray-100 border-b border-gray-200 p-4">
+                <h1 className="text-xl font-semibold text-gray-800">{agentNames[agentIndex]}</h1>
+              </div>
+              <ChatSection 
+                messages={agentMessages[agentIndex]}
+                isLoading={isLoading[agentIndex]}
+                agentIndex={agentIndex}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Graphs Section - 25% width */}
+      <div className="w-1/4 fixed right-0 top-0 bottom-0 bg-white border-l border-gray-200" 
+           style={{ marginTop: '73px' }}>
+        <div className="h-full overflow-y-auto bg-white">
+          <Graphs scoreData={scoreData} speedData={speedData} />
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -246,7 +285,7 @@ function ChatSection({ messages, isLoading, agentIndex }: {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto pb-4 pt-4 bg-white">
+    <div className="flex-1 overflow-y-auto pb-4 pt-4 bg-white h-full">
       <div className="px-4">
         {isLoading && (
           <div className="flex gap-4 mb-4">

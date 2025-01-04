@@ -13,12 +13,12 @@ export async function POST(req: Request) {
             getGroqResponse("gemma2-9b-it", systemPrompt, testQuestion),
             getGroqResponse("mixtral-8x7b-32768", systemPrompt, testQuestion)
         ]);
-        const judgeResponse = await llmJudge(testQuestion, [
+        const judgeResponse = await llmJudge(testQuestion, expectedAnswer, [
             llamaResponse.content, 
             gemmaResponse.content, 
             mistralResponse.content]);
         
-        feedScore(judgeResponse.f1Scores[0], judgeResponse.f1Scores[1], judgeResponse.f1Scores[2]);
+        feedScore(judgeResponse.f1Scores[0], judgeResponse.f1Scores[1], judgeResponse.f1Scores[2], judgeResponse.conclusion);
         feedSpeed(llamaResponse.executionTime, gemmaResponse.executionTime, mistralResponse.executionTime);
         feedExperiment(systemPrompt, testQuestion, expectedAnswer);
 

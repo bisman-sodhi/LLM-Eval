@@ -3,15 +3,18 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import { config } from 'dotenv';
 import { scoreData, speedData } from './../../../db/schema';
+
 config({ path: '.env' });
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
+
 interface Score {
   id: number;
   llamaScore: number;
   gemmaScore: number;
   mistralScore: number;
+  conclusion: string;
 }
 
 interface Speed {
@@ -22,57 +25,39 @@ interface Speed {
 }
 
 export async function GET() {
-  try {
-    // Test database connection
     try {
-      // Simple query to test connection
-      await db.select().from(scoreData).limit(1);
-    } catch (dbError) {
-      console.error('Database connection test failed:', dbError);
+      // Test database connection
+      try {
+        await db.select().from(scoreData).limit(1);
+      } catch (dbError) {
+        console.error('Database connection error:', dbError);
+        return NextResponse.json({ 
+          error: "Database connection failed",
+          scores: [],
+          speeds: []
+        }, { status: 500 });
+      }
+  
+      // Fetch data
+      const scores = await db.select().from(scoreData).orderBy(scoreData.id);
+      const speeds = await db.select().from(speedData).orderBy(speedData.id);
+  
+      console.log('Data fetched successfully:', { 
+        scoresCount: scores.length, 
+        speedsCount: speeds.length 
+      });
+  
+      return NextResponse.json({
+        scores: scores || [],
+        speeds: speeds || []
+      });
+  
+    } catch (error) {
+      console.error('Error in historical-data:', error);
       return NextResponse.json({ 
-        error: "Database connection failed", 
-        details: dbError instanceof Error ? dbError.message : 'Unknown error',
-        scores: [], 
-        speeds: [] 
+        error: "Failed to fetch data",
+        scores: [],
+        speeds: []
       }, { status: 500 });
     }
-
-    // Fetch data with separate try-catch blocks
-    let scores: Score[] = [];
-    let speeds: Speed[] = [];
-
-    try {
-      scores = await db.select().from(scoreData);
-      console.log('Scores fetched:', scores);
-    } catch (scoreError) {
-      console.error('Error fetching scores:', scoreError);
-    }
-
-    try {
-      speeds = await db.select().from(speedData);
-      console.log('Speeds fetched:', speeds);
-    } catch (speedError) {
-      console.error('Error fetching speeds:', speedError);
-    }
-
-    return NextResponse.json({
-      scores,
-      speeds
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-  } catch (error) {
-    console.error('Top level error in historical-data:', error);
-    return NextResponse.json({ 
-      error: "Failed to fetch historical data", 
-      details: error instanceof Error ? error.message : 'Unknown error',
-      scores: [], 
-      speeds: [] 
-    }, { 
-      status: 500 
-    });
   }
-}
