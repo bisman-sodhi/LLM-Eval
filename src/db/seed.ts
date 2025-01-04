@@ -45,35 +45,3 @@ async function main() {
   }
 }
 main();
-
-// export async function feedSpeed(llamaSpeed: number, gemmaSpeed: number, mistralSpeed: number) {
-//   await db.insert(speedData).values([
-//     {
-//       llamaSpeed: 0,
-//       gemmaSpeed: 0,
-//       mistralSpeed: 0,
-//     },
-//   ]);
-// }
-
-// export async function feedScore(llamaScore: number, gemmaScore: number, mistralScore: number) {
-//     await db.insert(scoreData).values([
-//       {
-//         llamaScore: 0,
-//         gemmaScore: 0,
-//         mistralScore: 0,
-//       },
-//     ]);
-//   }
-
-// async function main() {
-//   try {
-//     await feedPrompts(promptDB[0], testQuestionDB[0], expectedAnswerDB[0]);
-//     console.log('Seeding completed');
-//   } catch (error) {
-//     console.error('Error during seeding:', error);
-//     process.exit(1);
-//   }
-// }
-
-// main();

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { getGroqResponse, llmJudge } from "@/app/util/llmClient";
-// import { scrapeUrl, urlPattern } from "@/app/util/scraper";
 import { feedScore, feedSpeed, feedExperiment } from "@/db/index";
 
 export const judgeResponse = [];
@@ -22,18 +21,6 @@ export async function POST(req: Request) {
         feedScore(judgeResponse.f1Scores[0], judgeResponse.f1Scores[1], judgeResponse.f1Scores[2]);
         feedSpeed(llamaResponse.executionTime, gemmaResponse.executionTime, mistralResponse.executionTime);
         feedExperiment(systemPrompt, testQuestion, expectedAnswer);
-
-        // console.log(JSON.stringify({
-        //     llamaResponse: llamaResponse.content, 
-        //     gemmaResponse: gemmaResponse.content, 
-        //     mistralResponse: mistralResponse.content, 
-        //     judgeResponse,
-        //     executionTimes: {
-        //         llama: llamaResponse.executionTime,
-        //         gemma: gemmaResponse.executionTime,
-        //         mistral: mistralResponse.executionTime
-        //     }
-        //  }));
 
         return NextResponse.json({
             llamaResponse: llamaResponse.content, 

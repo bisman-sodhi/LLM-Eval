@@ -7,16 +7,6 @@ export const experimentsTable = pgTable('experiments_table', {
   expectedAnswer: text('expected_answer').notNull(),
 });
 
-// export const analyzeData = pgTable('score_and_speed_table', {
-//     id: serial('id').primaryKey(),
-//     llamaResponse: text('llama_response').notNull(),
-//     gemmaResponse: text('gemma_response').notNull(),
-//     mistralResponse: text('mistral_response').notNull(),
-//     judgeResponse: text('judge_response').notNull(),
-//     executionTimes: jsonb('execution_times').notNull(),
-//   });
-// export type InsertExperiment = typeof experimentsTable.$inferInsert;
-
 export const scoreData = pgTable('score_table', {
     id: serial('id').primaryKey(),
     llamaScore: real('llama_score').notNull(),
