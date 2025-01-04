@@ -1,0 +1,130 @@
+{
+  "id": "d74dd157-8793-40a5-8ed8-7f46defa4fc4",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.experiments_table": {
+      "name": "experiments_table",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_prompt": {
+          "name": "system_prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "test_question": {
+          "name": "test_question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_answer": {
+          "name": "expected_answer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.score_table": {
+      "name": "score_table",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "llama_score": {
+          "name": "llama_score",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gemma_score": {
+          "name": "gemma_score",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mistral_score": {
+          "name": "mistral_score",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.speed_table": {
+      "name": "speed_table",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "llama_speed": {
+          "name": "llama_speed",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gemma_speed": {
+          "name": "gemma_speed",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mistral_speed": {
+          "name": "mistral_speed",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
