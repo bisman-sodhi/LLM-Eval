@@ -1,6 +1,6 @@
 "use client";
 import Image from 'next/image';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Graphs from "./components/graphs";
 
 type Message = {
@@ -17,9 +17,20 @@ export default function Home() {
     [{ role: "ai", content: "Hello! I'm Gemma. How can I help?" }],
     [{ role: "ai", content: "Hello! I'm Mistral. How can I help?" }],
   ]);
-  const [scoreData, setScoreData] = useState<any[]>([]);
-  const [speedData, setSpeedData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState([false, false, false]);
+  const [scoreData, setScoreData] = useState<Array<{
+    name: number;
+    llamaScore: number;
+    gemmaScore: number;
+    mistralScore: number;
+  }>>([]);
+  
+  const [speedData, setSpeedData] = useState<Array<{
+    name: number;
+    llamaSpeed: number;
+    gemmaSpeed: number;
+    mistralSpeed: number;
+  }>>([]);
 
   const handleSend = async () => {
     if (!systemPrompt.trim() || !testQuestion.trim() || !expectedAnswer.trim()) return;
@@ -46,14 +57,6 @@ export default function Home() {
 
       const data = await response.json();
 
-      // Update score data
-      setScoreData(prev => [...prev, {
-        name: prev.length + 1,
-        llamaScore: data.judgeResponse.f1Scores[0],
-        gemmaScore: data.judgeResponse.f1Scores[1],
-        mistralScore: data.judgeResponse.f1Scores[2]
-      }]);
-
       // Map each response to the correct agent
       setAgentMessages(prev => prev.map((messages, idx) => [
         { 
@@ -64,7 +67,16 @@ export default function Home() {
         },
         ...messages
       ]));
-      // Update speed data
+      
+            // Update score data with new entry
+      setScoreData(prev => [...prev, {
+        name: prev.length + 1,
+        llamaScore: data.judgeResponse.f1Scores[0],
+        gemmaScore: data.judgeResponse.f1Scores[1],
+        mistralScore: data.judgeResponse.f1Scores[2]
+      }]);
+
+      // Update speed data with new entry
       setSpeedData(prev => [...prev, {
         name: prev.length + 1,
         llamaSpeed: data.executionTimes.llama,
@@ -81,6 +93,45 @@ export default function Home() {
   };
 
   const agentNames = ["Llama", "Gemma", "Mistral"];
+
+  // Load historical data on component mount
+  useEffect(() => {
+    const loadHistoricalData = async () => {
+      try {
+        const response = await fetch('/api/historical-data/');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (data.scores && data.speeds) {
+          const formattedScoreData = data.scores.map((score: any, index: number) => ({
+            name: index + 1,
+            llamaScore: score.llama_score,
+            gemmaScore: score.gemma_score,
+            mistralScore: score.mistral_score
+          }));
+    
+          const formattedSpeedData = data.speeds.map((speed: any, index: number) => ({
+            name: index + 1,
+            llamaSpeed: speed.llama_speed,
+            gemmaSpeed: speed.gemma_speed,
+            mistralSpeed: speed.mistral_speed
+          }));
+    
+          setScoreData(formattedScoreData);
+          setSpeedData(formattedSpeedData);
+        }
+      } catch (error) {
+        console.error('Error loading historical data:', error);
+        // Set empty arrays if there's an error
+        setScoreData([]);
+        setSpeedData([]);
+      }
+    };
+  
+    loadHistoricalData();
+  }, []);
 
 return (
   <div className="flex flex-col h-screen bg-white">
