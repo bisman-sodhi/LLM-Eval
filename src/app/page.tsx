@@ -59,8 +59,6 @@ export default function Home() {
         }),
       });
 
-      // feedPrompts(systemPrompt, testQuestion, expectedAnswer);
-
       const data = await response.json();
 
       // Map each response to the correct agent
@@ -74,7 +72,7 @@ export default function Home() {
         ...messages
       ]));
       
-            // Update score data with new entry
+      // Update score data with new entry
       setScoreData(prev => [...prev, {
         name: prev.length + 1,
         llamaScore: data.judgeResponse.f1Scores[0],
@@ -100,73 +98,6 @@ export default function Home() {
   };
 
   const agentNames = ["Llama", "Gemma", "Mistral"];
-
-  // Load historical data on component mount
-  useEffect(() => {
-    const loadHistoricalData = async () => {
-      try {
-        const response = await fetch('/api/historical-data');
-        
-        if (!response.ok) {
-          console.error('Server error:', {
-            status: response.status,
-            statusText: response.statusText,
-            url: response.url
-          });
-  
-          // Try to get error details if available
-          try {
-            const errorData = await response.json();
-            console.error('Error details:', errorData);
-          } catch (parseError) {
-            console.error('Could not parse error response');
-          }
-  
-          setScoreData([]);
-          setSpeedData([]);
-          return;
-        }
-  
-        const data = await response.json();
-        console.log('Received data:', data); // Debug log
-  
-        if (!data.scores || !data.speeds) {
-          console.error('Invalid data format:', data);
-          setScoreData([]);
-          setSpeedData([]);
-          return;
-        }
-  
-        const formattedScoreData = data.scores.map((score: any, index: number) => ({
-          name: index + 1,
-          llamaScore: score.llamaScore,
-          gemmaScore: score.gemmaScore,
-          mistralScore: score.mistralScore,
-          conclusion: score.conclusion
-        }));
-  
-        const formattedSpeedData = data.speeds.map((speed: any, index: number) => ({
-          name: index + 1,
-          llamaSpeed: speed.llamaSpeed,
-          gemmaSpeed: speed.gemmaSpeed,
-          mistralSpeed: speed.mistralSpeed
-        }));
-  
-        setScoreData(formattedScoreData);
-        setSpeedData(formattedSpeedData);
-        
-      } catch (error) {
-        console.error('Error loading historical data:', {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          error
-        });
-        setScoreData([]);
-        setSpeedData([]);
-      }
-    };
-  
-    loadHistoricalData();
-  }, []);
 
 return (
   <div className="flex flex-col min-h-screen bg-white">

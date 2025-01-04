@@ -12,11 +12,6 @@ const geminiAPIKey: string = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(geminiAPIKey);
 const gemini = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
 // one function for all models
 export async function getGroqResponse(model: string, systemPrompt: string, testQuestion: string): Promise<{ content: string, executionTime: number }> { 
     const startTime = performance.now();
@@ -144,6 +139,7 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
                         - Which model performed best overall and why
                         - Key strengths and weaknesses of each response
                         - Specific examples from the responses to support your evaluation
+                        The conclusion shoule be no more than 100 words
                         
                         Format the conclusion as: "Conclusion: [your analysis]"
 
@@ -204,11 +200,8 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
         if (!conclusion) {
           throw new Error("Failed to extract conclusion from response");
         }
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.log(f1Scores);
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.log(conclusion);
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         return { conclusion, f1Scores };
     } catch (error) {
         console.error("Error in LLM Judge:", error);
