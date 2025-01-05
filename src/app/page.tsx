@@ -23,6 +23,9 @@ const ChatbotImage = memo(function ChatbotImage({ model }: { model: string }) {
       width={40}
       height={40}
       className="rounded-full"
+      priority={true}
+      loading="eager"
+      unoptimized={true}  // Skip image optimization
     />
   );
 });
