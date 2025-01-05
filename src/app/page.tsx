@@ -1,12 +1,31 @@
 "use client";
 import Image from 'next/image';
-import { useState } from "react";
+import { useState, memo } from "react";
 import Graphs from "./components/graphs";
 
 type Message = {
   role: "user" | "ai";
   content: string;
 };
+
+// Memoized ChatbotImage component
+const ChatbotImage = memo(function ChatbotImage({ model }: { model: string }) {
+  const imageMap = {
+    'llama': '/llama.png',
+    'gemma': '/gemma.png',
+    'mistral': '/mistral.png'
+  };
+
+  return (
+    <Image
+      src={imageMap[model as keyof typeof imageMap]}
+      alt={`${model} avatar`}
+      width={40}
+      height={40}
+      className="rounded-full"
+    />
+  );
+});
 
 export default function Home() {
   const [systemPrompt, setSystemPrompt] = useState("");
@@ -56,7 +75,7 @@ export default function Home() {
         body: JSON.stringify({ 
           systemPrompt: finalSystemPrompt, 
           testQuestion, 
-          expectedAnswer: finalExpectedAnswer 
+          expectedAnswer: finalExpectedAnswer
         }),
       });
 
@@ -202,20 +221,21 @@ function ChatSection({ messages, isLoading, agentIndex }: {
   agentIndex: number;
 }) {
   const getAgentColor = (isAi: boolean) => {
-    if (!isAi) return 'bg-blue-500 text-white'; // User messages are blue
+    if (!isAi) return 'bg-blue-500 text-white';
     switch(agentIndex) {
-      case 0: return 'bg-yellow-100 text-gray-800'; // Llama is yellow
-      case 1: return 'bg-green-100 text-gray-800';  // Gemma is green
-      case 2: return 'bg-red-100 text-gray-800';    // Mistral is red
+      case 0: return 'bg-yellow-100 text-gray-800';
+      case 1: return 'bg-green-100 text-gray-800';
+      case 2: return 'bg-red-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-  const getAgentIcon = (agentIndex: number) => {
+
+  const getAgentModel = (agentIndex: number) => {
     switch(agentIndex) {
-      case 0: return '/llama.png';
-      case 1: return '/gemma.png';
-      case 2: return '/mistral.png';
-      default: return '';
+      case 0: return 'llama';
+      case 1: return 'gemma';
+      case 2: return 'mistral';
+      default: return 'llama';
     }
   };
 
@@ -225,13 +245,7 @@ function ChatSection({ messages, isLoading, agentIndex }: {
         {isLoading && (
           <div className="flex gap-4 mb-4">
             <div className="w-8 h-8 flex-shrink-0">
-              <Image
-                src={getAgentIcon(agentIndex)}
-                alt={agentNames[agentIndex]}
-                width={32}
-                height={32}
-                className="rounded-full"
-              />
+              <ChatbotImage model={getAgentModel(agentIndex)} />
             </div>
             <div className={`px-4 py-2 rounded-2xl ${getAgentColor(true)}`}>
               <div className="flex items-center gap-1">
@@ -251,13 +265,7 @@ function ChatSection({ messages, isLoading, agentIndex }: {
           >
             {msg.role === "ai" && (
               <div className="w-8 h-8 flex-shrink-0">
-                <Image
-                  src={getAgentIcon(agentIndex)}
-                  alt={agentNames[agentIndex]}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
+                <ChatbotImage model={getAgentModel(agentIndex)} />
               </div>
             )}
             <div
