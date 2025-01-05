@@ -24,6 +24,7 @@ export default function Home() {
     gemmaScore: number;
     mistralScore: number;
     conclusion: string;
+    taskType: 'factual' | 'creative' | 'analytical';
   }>>([]);
   
   const [speedData, setSpeedData] = useState<Array<{
@@ -73,13 +74,16 @@ export default function Home() {
       ]));
       
       // Update score data with new entry
-      setScoreData(prev => [...prev, {
-        name: prev.length + 1,
-        llamaScore: data.judgeResponse.f1Scores[0],
-        gemmaScore: data.judgeResponse.f1Scores[1],
-        mistralScore: data.judgeResponse.f1Scores[2],
-        conclusion: data.judgeResponse.conclusion
-      }]);
+      if (data?.judgeResponse?.scores) {
+        setScoreData(prev => [...prev, {
+          name: prev.length + 1,
+          llamaScore: data.judgeResponse.scores[0],
+          gemmaScore: data.judgeResponse.scores[1],
+          mistralScore: data.judgeResponse.scores[2],
+          conclusion: data.judgeResponse.conclusion,
+          taskType: data.judgeResponse.taskType
+        }]);
+      }
 
       // Update speed data with new entry
       setSpeedData(prev => [...prev, {
@@ -191,7 +195,7 @@ return (
   </div>
 );
 
-// Modified ChatSection component
+// ChatSection component
 function ChatSection({ messages, isLoading, agentIndex }: {
   messages: Message[];
   isLoading: boolean;
@@ -200,9 +204,9 @@ function ChatSection({ messages, isLoading, agentIndex }: {
   const getAgentColor = (isAi: boolean) => {
     if (!isAi) return 'bg-blue-500 text-white'; // User messages are blue
     switch(agentIndex) {
-      case 0: return 'bg-yellow-100 text-gray-800'; // Agent 1 yellow
-      case 1: return 'bg-green-100 text-gray-800';  // Agent 2 green
-      case 2: return 'bg-red-100 text-gray-800';    // Agent 3 red
+      case 0: return 'bg-yellow-100 text-gray-800'; // Llama is yellow
+      case 1: return 'bg-green-100 text-gray-800';  // Gemma is green
+      case 2: return 'bg-red-100 text-gray-800';    // Mistral is red
       default: return 'bg-gray-100 text-gray-800';
     }
   };

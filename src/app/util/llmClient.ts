@@ -42,48 +42,65 @@ export async function getGroqResponse(model: string, systemPrompt: string, testQ
   }
 
 interface Scores {
-    closeness: number;
-    helpfulness: number;
-    relevance: number;
     accuracy: number;
+    relevance: number;
+    conciseness: number;
+    helpfulness: number;
     depth: number;
     creativity: number;
-    conciseness: number;
 }
 
-function calculateF1Score(scores: Scores): number {
-  // Validate that all required scores are present
-  const requiredScores = ['closeness', 'helpfulness', 'relevance', 'accuracy', 'depth', 'creativity', 'conciseness'];
-  
-  const missingScores = requiredScores.filter(score => !(score in scores));
-  if (missingScores.length > 0) {
-      console.error('Missing scores:', missingScores);
-      return 0;
-  }
+function detectTaskType(question: string): 'factual' | 'creative' | 'analytical' {
+    // Keywords that suggest task type
+    const factualKeywords = ['what', 'when', 'where', 'who', 'which', 'how many', 'date', 'time', 'year'];
+    const creativeKeywords = ['write', 'create', 'imagine', 'story', 'design', 'describe', 'generate'];
+    const analyticalKeywords = ['analyze', 'compare', 'evaluate', 'explain', 'why', 'how', 'assess'];
 
-  const { closeness, helpfulness, relevance, accuracy, depth, creativity, conciseness } = scores;
-  
-  // Log all scores before calculation
-  console.log('Processing complete score set:', {
-      closeness, helpfulness, relevance, accuracy, depth, creativity, conciseness
-  });
-
-  // Precision calculation
-  const precision = (relevance + accuracy + closeness) / 3;
-  console.log('Precision:', precision);
-
-  // Recall calculation
-  const recall = (helpfulness + depth + creativity + conciseness) / 4;
-  console.log('Recall:', recall);
-
-  // F1 Score calculation
-  if (precision + recall === 0) return 0;
-  const f1Score = (2 * precision * recall) / (precision + recall);
-  
-  return Number(f1Score.toFixed(2));
+    question = question.toLowerCase();
+    
+    if (factualKeywords.some(keyword => question.includes(keyword))) {
+        return 'factual';
+    } else if (creativeKeywords.some(keyword => question.includes(keyword))) {
+        return 'creative';
+    } else if (analyticalKeywords.some(keyword => question.includes(keyword))) {
+        return 'analytical';
+    }
+    
+    return 'factual'; // default to factual if unclear
 }
 
-export async function llmJudge(testQuestion: string, expectedAnswer: string, chatbotResponses: string[]): Promise<{conclusion: string, f1Scores: number[] }> {
+function calculateTaskScore(scores: Scores, taskType: 'factual' | 'creative' | 'analytical'): number {
+    const scoringRubrics = {
+        factual: {
+            accuracy: 0.4,
+            relevance: 0.3,
+            conciseness: 0.3
+        },
+        creative: {
+            creativity: 0.4,
+            depth: 0.3,
+            helpfulness: 0.3
+        },
+        analytical: {
+            depth: 0.4,
+            accuracy: 0.3,
+            relevance: 0.3
+        }
+    };
+
+    const rubric = scoringRubrics[taskType];
+    const score = Object.entries(rubric)
+        .reduce((sum, [metric, weight]) => 
+            sum + (scores[metric as keyof Scores] * weight), 0);
+    
+    return Number(score.toFixed(2));
+}
+
+export async function llmJudge(testQuestion: string, expectedAnswer: string, chatbotResponses: string[]): Promise<{ 
+    conclusion: string; 
+    scores: number[];
+    taskType: 'factual' | 'creative' | 'analytical';
+}> {
     const judge_prompt = `
                         You are an impartial judge evaluating AI responses. Compare these three responses to the question: 
                         Question: "${testQuestion}"
@@ -93,17 +110,17 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
                         Do not favor certain names of the assistants.
                         
                         Please evaluate these responses based on the following criteria (rate 1-10):
-                        - Closeness: How well it matches the expected answer (if no expected answer is provided, evaluate based on general accuracy and appropriateness).
-                        - Helpfulness: How effectively it addresses the user's needs
+                        - Closeness: Aligns with the expected answer or intended goal. (if no expected answer is provided, evaluate based on general accuracy and appropriateness).
+                        - Helpfulness: Meet the user need effectively
                         - Relevance: How directly it answers the question
                         - Accuracy: Factual correctness and precision
-                        - Depth: Thoroughness and level of detail
-                        - Creativity: Innovative thinking and unique insights
-                        - Conciseness: Efficiency and clarity of communication
+                        - Depth: Detailed and comprehensive where needed
+                        - Creativity: Adds value without straying far from the expected answer if provided
+                        - Conciseness: Communicates effectively with minimal words
 
                         Provide:
                         1. The numerical scores in this exact format for each response:
-                        Response 1 scores:
+                        Llama scores:
                         Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
@@ -112,7 +129,7 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
                         Creativity: [number]
                         Conciseness: [number]
 
-                        Response 2 scores:
+                        Gemma scores:
                         Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
@@ -121,7 +138,7 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
                         Creativity: [number]
                         Conciseness: [number]
 
-                        Response 3 scores:
+                        Mistral scores:
                         Closeness: [number]
                         Helpfulness: [number]
                         Relevance: [number]
@@ -150,15 +167,15 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
         const response = await result.response;
         const text = response.text();
 
-        // Parse scores from the response
+        const taskType = detectTaskType(testQuestion);
         const scores: Scores[] = [];
+        let currentResponseScores: Partial<Scores> = {};
         const responseLines = text.split('\n');
-        
-        let currentScores: Partial<Scores> = {};
-        let currentResponseScores: Partial<Scores> | null = null;
 
         for (const line of responseLines) {
-          if (line.toLowerCase().includes('response') && line.includes('scores:')) {
+          if (line.toLowerCase().includes('llama scores:') || 
+              line.toLowerCase().includes('gemma scores:') || 
+              line.toLowerCase().includes('mistral scores:')) {
               if (currentResponseScores && Object.keys(currentResponseScores).length > 0) {
                   scores.push(currentResponseScores as Scores);
               }
@@ -185,28 +202,18 @@ export async function llmJudge(testQuestion: string, expectedAnswer: string, cha
   
       console.log('Parsed score sets:', scores);
   
-      // Calculate F1 scores
-      const f1Scores = scores.map((scoreSet, index) => {
-          console.log(`Calculating F1 score for response ${index + 1}:`, scoreSet);
-          return calculateF1Score(scoreSet);
-      });
-        const conclusionMatch = text.match(/conclusion:([^]*?)(?=\n\n|$)/i);
-        const conclusion = conclusionMatch ? conclusionMatch[1].trim() : "No conclusion provided";
-        // Validate results
-        if (f1Scores.length !== 3) {
-          throw new Error("Failed to calculate scores for all responses");
-        }
+      // Calculate task-specific scores for each response
+      const taskScores = scores.map(score => calculateTaskScore(score, taskType));
+      const conclusionMatch = text.match(/conclusion:([^]*?)(?=\n\n|$)/i);
+      const conclusion = conclusionMatch ? conclusionMatch[1].trim() : "No conclusion provided";
 
-        if (!conclusion) {
-          throw new Error("Failed to extract conclusion from response");
-        }
-        console.log(f1Scores);
-        console.log(conclusion);
-        return { conclusion, f1Scores };
+      return { 
+          conclusion, 
+          scores: taskScores,
+          taskType 
+      };
     } catch (error) {
         console.error("Error in LLM Judge:", error);
         throw new Error("Failed to get judge's evaluation");
     }
 }
-
-

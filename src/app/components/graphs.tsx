@@ -24,7 +24,7 @@ export default function Graphs({ scoreData, speedData }: GraphsProps) {
       {/* Conclusion Box */}
       <div className="bg-white">
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-2">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Latest Evaluation</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Latest Gemini Judge Eval</h3>
           <p className="text-sm text-gray-600 whitespace-pre-wrap">
             {scoreData.length > 0 
               ? scoreData[scoreData.length - 1]?.conclusion 
@@ -34,20 +34,20 @@ export default function Graphs({ scoreData, speedData }: GraphsProps) {
       </div>
 
       {/* Score Graph */}
-      <div className="bg-white">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">F1 Scores Evaluated by Gemini</h3>
-        <div className="bg-white">
-          <LineChart width={300} height={250} data={scoreData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis domain={[0, 10]} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="llamaScore" stroke="#FFD700" name="Llama" />
-            <Line type="monotone" dataKey="gemmaScore" stroke="#4CAF50" name="Gemma" />
-            <Line type="monotone" dataKey="mistralScore" stroke="#FF0000" name="Mistral" />
-          </LineChart>
-        </div>
+      <div className="h-1/2 bg-white" suppressHydrationWarning>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+        Gemini Judge Scores
+        </h3>
+        <LineChart width={300} height={250} data={scoreData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis domain={[0, 10]} />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="llamaScore" stroke="#FFD700" name="Llama" />
+          <Line type="monotone" dataKey="gemmaScore" stroke="#4CAF50" name="Gemma" />
+          <Line type="monotone" dataKey="mistralScore" stroke="#FF0000" name="Mistral" />
+        </LineChart>
       </div>
 
       {/* Speed Graph */}
