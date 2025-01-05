@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LLM Evaluation Tool
 
-## Getting Started
+## Live Demo
+[View Project](https://llm-eval-pied.vercel.app)
 
-First, run the development server:
+## Overview
+A comprehensive tool for evaluating chatbot performance across different Large Language Models (LLMs) on various task types.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Models Evaluated
+- Llama-3.3-70b-versatile
+- Gemma2-9b-it
+- Mixtral-8x7b-32768
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Evaluation Methodology
+The evaluation uses LLM-as-a-judge approach with Gemini 1.5 Flash-8B as the evaluator. Responses are scored based on task type:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Task Types & Scoring Weights
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+#### Factual Tasks
+- Accuracy (40%)
+- Relevance (30%)
+- Conciseness (30%)
 
-## Learn More
+#### Creative Tasks
+- Creativity (40%)
+- Depth (30%)
+- Helpfulness (30%)
 
-To learn more about Next.js, take a look at the following resources:
+#### Analytical Tasks
+- Depth (40%)
+- Accuracy (30%)
+- Relevance (30%)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Evaluation Criteria
+- **Closeness**: Alignment with expected answer
+- **Helpfulness**: Effectiveness in meeting user needs
+- **Relevance**: Direct answer relevance
+- **Accuracy**: Factual correctness
+- **Depth**: Comprehensiveness
+- **Creativity**: Value addition within constraints
+- **Conciseness**: Efficient communication
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data Processing
+Results are stored in a database and visualized through dynamic graphs showing:
+- Task-specific performance scores
+- Model response times
+- Comparative strengths across task types
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
