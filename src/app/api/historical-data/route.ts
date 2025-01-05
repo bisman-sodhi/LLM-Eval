@@ -9,21 +9,6 @@ config({ path: '.env' });
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
-interface Score {
-  id: number;
-  llamaScore: number;
-  gemmaScore: number;
-  mistralScore: number;
-  conclusion: string;
-}
-
-interface Speed {
-  id: number;
-  llamaSpeed: number;
-  gemmaSpeed: number;
-  mistralSpeed: number;
-}
-
 export async function GET() {
     try {
       // Test database connection

@@ -2,7 +2,7 @@ import Groq from 'groq-sdk';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,

@@ -3,12 +3,29 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-interface GraphsProps {
-  scoreData: any[];
-  speedData: any[];
+interface ScoreData {
+  name: number;
+  llamaScore: number;
+  gemmaScore: number;
+  mistralScore: number;
+  conclusion: string;
+  taskType: 'factual' | 'creative' | 'analytical';
 }
 
-export default function Graphs({ scoreData, speedData }: GraphsProps) {
+interface SpeedData {
+  name: number;
+  llamaSpeed: number;
+  gemmaSpeed: number;
+  mistralSpeed: number;
+}
+
+export default function Graphs({ 
+  scoreData, 
+  speedData 
+}: { 
+  scoreData: ScoreData[],
+  speedData: SpeedData[] 
+}) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
